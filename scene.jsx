@@ -1216,7 +1216,7 @@ function App() {
           <ApproachableAIScene />
         </Stage>
       </TweaksContext.Provider>
-      {!launched && (
+      {!skipConfig && (
         <button
           onClick={() => setMode('config')}
           title="Back to configuration"
