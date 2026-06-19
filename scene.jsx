@@ -962,7 +962,7 @@ function TopBar() {
       fontFamily: MONO
     }}>
       <div style={{ fontSize: 12, letterSpacing: '0.18em', color: AMBER }}>APPROACHABLE AI</div>
-      <div style={{ fontSize: 12, letterSpacing: '0.14em', opacity: 0.5 }}>·  AI FACTORY ADVISOR · RUNNING LOCALLY</div>
+      <div style={{ fontSize: 12, letterSpacing: '0.14em', opacity: 0.5 }}>· RUNNING LOCALLY</div>
       <div style={{ flex: 1 }} />
       <div style={{ fontSize: 11, letterSpacing: '0.16em', opacity: 0.5 }}>FACTORY ADVISORS</div>
     </div>);
@@ -1004,7 +1004,7 @@ function BottomBar({ sceneIdx, phase }) {
 
       })}
       <div style={{ flex: 1 }} />
-      <div style={{ opacity: 0.45, fontSize: 11 }}>0 BYTES EGRESS · SINCE BOOT</div>
+      <div style={{ opacity: 0.45, fontSize: 11 }}>0 BYTES EGRESS</div>
     </div>);
 
 }
@@ -1185,11 +1185,13 @@ function App() {
 
   const [mode, setMode] = React.useState(skipConfig ? 'gate' : 'config');
   const [cfg, setCfg] = React.useState(bakedCfg || CONFIG_DEFAULTS);
+  const [launched, setLaunched] = React.useState(skipConfig);
 
   const timing = React.useMemo(() => computeTiming(cfg.prompts), [cfg]);
 
   const handleLaunch = (savedCfg) => {
     setCfg(savedCfg);
+    setLaunched(true);
     setMode('gate');
   };
 
@@ -1214,7 +1216,7 @@ function App() {
           <ApproachableAIScene />
         </Stage>
       </TweaksContext.Provider>
-      {!skipConfig && (
+      {!launched && (
         <button
           onClick={() => setMode('config')}
           title="Back to configuration"
