@@ -200,6 +200,7 @@ async function exportStandalone(cfg) {
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>Approachable AI · Local LLM on a Laptop</title>
+<link rel="icon" type="image/png" href="${cfg.logoSrc || CONFIG_DEFAULTS.logoSrc}"/>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
@@ -494,45 +495,45 @@ function PrevTopBar() {
       <div style={{ letterSpacing: '0.18em', color: C_AMBER }}>APPROACHABLE AI</div>
       <div style={{ letterSpacing: '0.14em', opacity: 0.5 }}>· AI FACTORY ADVISOR · RUNNING LOCALLY</div>
       <div style={{ flex: 1 }} />
-      <div style={{ fontSize: 11, letterSpacing: '0.16em', opacity: 0.5 }}>FTE FACTORY ADVISORS</div>
+      <div style={{ fontSize: 11, letterSpacing: '0.16em', opacity: 0.5 }}>FACTORY ADVISORS</div>
     </div>
   );
 }
 function PrevBottomBar({ phase }) {
   const labels = ['INTRO', 'PROMPT 1', 'PROMPT 2', 'PROMPT 3', 'OUTRO'];
   return (
-    <div style={{ position: 'absolute', left: 60, right: 60, bottom: 36,
+    <div style={{ position: 'absolute', left: 60, right: 60, bottom: 20,
       display: 'flex', gap: 14, alignItems: 'center',
-      color: '#EFEDE8', fontFamily: C_MONO, fontSize: 11, letterSpacing: '0.14em' }}>
+      color: '#EFEDE8', fontFamily: C_MONO, fontSize: 18, letterSpacing: '0.14em' }}>
       {labels.map((lbl, i) => {
         const active = i === phase, done = i < phase;
         return (
           <React.Fragment key={i}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8,
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12,
               opacity: active ? 1 : done ? 0.55 : 0.25 }}>
-              <div style={{ width: 8, height: 8, borderRadius: 4,
+              <div style={{ width: 14, height: 14, borderRadius: 7,
                 background: active ? C_AMBER : done ? '#EFEDE8' : 'transparent',
                 border: `1px solid ${active || done ? 'transparent' : 'rgba(239,237,232,0.35)'}` }} />
               <span style={{ fontWeight: active ? 600 : 400 }}>{lbl}</span>
             </div>
             {i < labels.length - 1 &&
-              <div style={{ flex: 1, height: 1, background: 'rgba(239,237,232,0.14)', maxWidth: 60 }} />}
+              <div style={{ flex: 1, height: 1, background: 'rgba(239,237,232,0.14)', maxWidth: 80 }} />}
           </React.Fragment>
         );
       })}
       <div style={{ flex: 1 }} />
-      <div style={{ opacity: 0.45 }}>0 BYTES EGRESS · SINCE BOOT</div>
+      <div style={{ opacity: 0.45, fontSize: 11 }}>0 BYTES EGRESS · SINCE BOOT</div>
     </div>
   );
 }
 function PrevScrollHint() {
   return (
-    <div style={{ position: 'absolute', bottom: 88, left: '50%', transform: 'translateX(-50%)',
-      display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 7 }}>
-      <div style={{ fontFamily: C_MONO, fontSize: 13, letterSpacing: '0.2em', color: '#737984' }}>
-        SCROLL TO CONTINUE
+    <div style={{ position: 'absolute', top: 878, left: '50%', transform: 'translateX(-50%)',
+      display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 7, whiteSpace: 'nowrap' }}>
+      <div style={{ fontFamily: C_MONO, fontSize: 48, letterSpacing: '0.2em', color: '#EFEDE8', fontWeight: 600, lineHeight: 1 }}>
+        CLICK OR SCROLL TO CONTINUE
       </div>
-      <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
+      <svg width="80" height="80" viewBox="0 0 22 22" fill="none">
         <path d="M11 3v16M3 11l8 8 8-8" stroke="#E6870B" strokeWidth="1.6"
           strokeLinecap="round" strokeLinejoin="round" />
       </svg>
@@ -543,7 +544,7 @@ function PrevScrollHint() {
 function PrevLaptop({ scale = 1, tx = 0, children }) {
   const lw = 1144, lh = 684; // 1100+22*2, 640+22*2
   return (
-    <div style={{ position: 'absolute', left: 410, top: 180, width: lw, height: lh + 36,
+    <div style={{ position: 'absolute', left: 410, top: 120, width: lw, height: lh + 36,
       transform: `translate(${tx}px, 0) scale(${scale})`, transformOrigin: '50% 50%' }}>
       <div style={{ position: 'absolute', left: 0, top: 0, width: lw, height: lh,
         background: '#1c2030', borderRadius: 14, overflow: 'hidden' }}>
@@ -565,7 +566,7 @@ function PrevLaptop({ scale = 1, tx = 0, children }) {
 // ── Screen content components (render inside the 1100×640 laptop screen) ────
 
 function PrevBootContent({ subtitle, logoSrc, logoBgColor }) {
-  const src = logoSrc;
+  const src = logoSrc || CONFIG_DEFAULTS.logoSrc;
   const bg  = logoBgColor || '#002141';
   return (
     <div style={{ position: 'absolute', inset: 0, background: '#EFEDE8',
@@ -805,7 +806,7 @@ function BootPrev({ cfg }) {
       <PrevBG />
       <PrevTopBar />
       <PrevLaptop scale={1} tx={0}>
-        <PrevBootContent subtitle={cfg.bootSubtitle || CONFIG_DEFAULTS.bootSubtitle} />
+        <PrevBootContent subtitle={cfg.bootSubtitle || CONFIG_DEFAULTS.bootSubtitle} logoSrc={cfg.logoSrc} logoBgColor={cfg.logoBgColor} />
       </PrevLaptop>
       <PrevBottomBar phase={0} />
     </FramePreview>

@@ -452,9 +452,26 @@ function Stage({ width = 1280, height = 720, duration = 10, background = '#f6f4e
   );
 
   const handleClick = () => {
-    const next = !manualPauseRef.current;
-    manualPauseRef.current = next;
-    setManualPause(next);
+    if (frozenRef.current) {
+      // Advance past gate — same behaviour as scrolling down
+      const g = gatesRef.current;
+      const si = segmentIdxRef.current;
+      if (si < g.length) {
+        const resumeAt = g[si].resumeAt;
+        const next = si + 1;
+        segmentIdxRef.current = next;
+        frozenRef.current = false;
+        speedRef.current = 1;
+        setTime(resumeAt);
+        setSegmentIdx(next);
+        setFrozen(false);
+      }
+    } else {
+      // Normal play/pause toggle
+      const next = !manualPauseRef.current;
+      manualPauseRef.current = next;
+      setManualPause(next);
+    }
   };
 
   return (
@@ -478,15 +495,15 @@ function Stage({ width = 1280, height = 720, duration = 10, background = '#f6f4e
 
         {showScrollIndicator && (
           <div className="__aai_scroll_ind" style={{
-            position: 'absolute', bottom: 88, left: '50%',
+            position: 'absolute', top: 878, left: '50%', transform: 'translateX(-50%)',
             display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 7,
-            pointerEvents: 'none', zIndex: 50,
+            pointerEvents: 'none', zIndex: 50, whiteSpace: 'nowrap',
           }}>
             <div style={{ fontFamily: "'JetBrains Mono', ui-monospace, monospace",
-              fontSize: 13, letterSpacing: '0.2em', color: '#737984' }}>
-              SCROLL TO CONTINUE
+              fontSize: 48, letterSpacing: '0.2em', color: '#EFEDE8', fontWeight: 600, lineHeight: 1 }}>
+              CLICK OR SCROLL TO CONTINUE
             </div>
-            <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
+            <svg width="80" height="80" viewBox="0 0 22 22" fill="none">
               <path d="M11 3v16M3 11l8 8 8-8"
                 stroke="#E6870B" strokeWidth="1.6"
                 strokeLinecap="round" strokeLinejoin="round" />
