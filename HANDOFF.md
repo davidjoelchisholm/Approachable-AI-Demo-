@@ -141,6 +141,19 @@ Open DevTools → Application → Local Storage → `aai-config-v1` → paste JS
 
 ---
 
+## Exporting a Standalone File
+
+The ⚙ CONFIGURE screen has two export buttons. Both bake the current config into a single `.html` file that opens straight from disk (no server needed).
+
+| Button | File | Behaviour |
+|---|---|---|
+| **↓ EXPORT INTERACTIVE STANDALONE HTML** | `Approachable AI - Presentation.html` | Intro gate, then pauses at each scene — click, scroll or arrow keys to advance. For presenter-led demos. Loads React/Babel from the CDN, so it needs internet. |
+| **↓ EXPORT VIDEO HTML** | `Approachable AI - Video Loop.html` | No gates; plays the whole demo and loops forever. Ignores click/scroll/keys, hides the cursor and requests a screen wake lock. React/Babel are inlined (~3.5 MB), so it runs offline. For trade-show kiosks. |
+
+Video mode is driven by `window.__VIDEO_MODE` (set by the export) → `Stage loop` prop in `animations.jsx`. For an unattended kiosk, also set the laptop's power plan to never sleep and press F11 for fullscreen.
+
+---
+
 ## Building a Customer-Specific Demo Config
 
 There is a Claude skill and a standalone prompt that interview you and generate a ready-to-upload JSON config.

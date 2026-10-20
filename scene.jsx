@@ -1180,14 +1180,28 @@ const GATES = [
 function App() {
   // Support baked-config exports: skip config screen and use window.__BAKED_CONFIG
   const skipConfig = !!window.__SKIP_CONFIG_SCREEN;
+  // Video exports: no intro gate, no pauses, loop forever (trade-show kiosk).
+  const videoMode = !!window.__VIDEO_MODE;
   const bakedCfg = window.__BAKED_CONFIG
     ? { ...CONFIG_DEFAULTS, ...window.__BAKED_CONFIG } : null;
 
-  const [mode, setMode] = React.useState(skipConfig ? 'gate' : 'config');
+  const [mode, setMode] = React.useState(videoMode ? 'play' : skipConfig ? 'gate' : 'config');
   const [cfg, setCfg] = React.useState(bakedCfg || CONFIG_DEFAULTS);
   const [launched, setLaunched] = React.useState(skipConfig);
 
   const timing = React.useMemo(() => computeTiming(cfg.prompts), [cfg]);
+
+  // Keep the display awake while the video loop runs; the browser drops the
+  // lock whenever the tab is hidden, so re-request it when it becomes visible.
+  React.useEffect(() => {
+    if (!videoMode || !('wakeLock' in navigator)) return;
+    const request = () => {
+      if (document.visibilityState === 'visible') navigator.wakeLock.request('screen').catch(() => {});
+    };
+    request();
+    document.addEventListener('visibilitychange', request);
+    return () => document.removeEventListener('visibilitychange', request);
+  }, [videoMode]);
 
   const handleLaunch = (savedCfg) => {
     setCfg(savedCfg);
@@ -1212,7 +1226,8 @@ function App() {
           duration={timing.totalDur}
           background={BG}
           autoplay={true}
-          gates={timing.gates}>
+          loop={videoMode}
+          gates={videoMode ? [] : timing.gates}>
           <ApproachableAIScene />
         </Stage>
       </TweaksContext.Provider>
