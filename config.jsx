@@ -184,17 +184,49 @@ function newBlock(kind) {
 }
 
 // ─── Export standalone HTML ───────────────────────────────────────────────────
-async function exportStandalone(cfg) {
-  let status = 'Fetching source files…';
-  try {
-    const [animSrc, docsSrc, cfgSrc, sceneSrc] = await Promise.all([
-      fetch('animations.jsx').then(r => r.text()),
-      fetch('docs.jsx').then(r => r.text()),
-      fetch('config.jsx').then(r => r.text()),
-      fetch('scene.jsx').then(r => r.text()),
-    ]);
+// Two variants:
+//   'interactive' — intro gate + click/scroll gates; libraries load from the CDN.
+//   'video'       — no gates, loops forever, ignores input; libraries are inlined
+//                   so the file runs with no network (trade-show kiosk use).
+const EXPORT_LIBS = [
+  { src: 'https://unpkg.com/react@18.3.1/umd/react.production.min.js',
+    integrity: 'sha384-DGyLxAyjq0f9SPpVevD6IgztCFlnMF6oW/XQGmfe+IsZ8TqEiDrcHkMLKI6fiB/Z' },
+  { src: 'https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js',
+    integrity: 'sha384-gTGxhz21lVGYNMcdJOyq01Edg0jhn/c22nsx0kyqP0TxaV5WVdsSH1fSDUf5YJj1' },
+  { src: 'https://unpkg.com/@babel/standalone@7.29.0/babel.min.js',
+    integrity: 'sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y' },
+];
 
-    const html = `<!DOCTYPE html>
+const EXPORT_VARIANTS = {
+  interactive: { filename: 'Approachable AI - Presentation.html', videoMode: false, inlineLibs: false },
+  video:       { filename: 'Approachable AI - Video Loop.html',   videoMode: true,  inlineLibs: true  },
+};
+
+// Keep inlined source from closing its <script> element early.
+const escScript = (s) => s.replace(/<\/script/gi, '<\\/script');
+
+async function buildStandaloneHtml(cfg, variant = 'interactive') {
+  const opts = EXPORT_VARIANTS[variant];
+  const fetchText = (url, init) => fetch(url, init).then(r => {
+    if (!r.ok) throw new Error(`${url} → HTTP ${r.status}`);
+    return r.text();
+  });
+
+  const [animSrc, docsSrc, cfgSrc, sceneSrc, ...libSrcs] = await Promise.all([
+    fetchText('animations.jsx'),
+    fetchText('docs.jsx'),
+    fetchText('config.jsx'),
+    fetchText('scene.jsx'),
+    ...(opts.inlineLibs
+      ? EXPORT_LIBS.map(l => fetchText(l.src, { integrity: l.integrity, mode: 'cors' }))
+      : []),
+  ]);
+
+  const libTags = opts.inlineLibs
+    ? libSrcs.map(src => `<script>\n${escScript(src)}\n<\/script>`).join('\n')
+    : EXPORT_LIBS.map(l => `<script src="${l.src}" integrity="${l.integrity}" crossorigin="anonymous"><\/script>`).join('\n');
+
+  return `<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8"/>
@@ -213,32 +245,35 @@ async function exportStandalone(cfg) {
 <body>
 <div id="root"></div>
 <script>
-  window.__BAKED_CONFIG = ${JSON.stringify(cfg)};
+  window.__BAKED_CONFIG = ${escScript(JSON.stringify(cfg))};
   window.__SKIP_CONFIG_SCREEN = true;
+  window.__VIDEO_MODE = ${opts.videoMode};
 <\/script>
-<script src="https://unpkg.com/react@18.3.1/umd/react.production.min.js" crossorigin="anonymous"><\/script>
-<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js" crossorigin="anonymous"><\/script>
-<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" crossorigin="anonymous"><\/script>
+${libTags}
 <script type="text/babel">
-${cfgSrc}
-<\/script>
-<script type="text/babel">
-${animSrc}
+${escScript(cfgSrc)}
 <\/script>
 <script type="text/babel">
-${docsSrc}
+${escScript(animSrc)}
 <\/script>
 <script type="text/babel">
-${sceneSrc}
+${escScript(docsSrc)}
+<\/script>
+<script type="text/babel">
+${escScript(sceneSrc)}
 <\/script>
 </body>
 </html>`;
+}
 
+async function exportStandalone(cfg, variant = 'interactive') {
+  try {
+    const html = await buildStandaloneHtml(cfg, variant);
     const blob = new Blob([html], { type: 'text/html' });
     const url  = URL.createObjectURL(blob);
     const a    = document.createElement('a');
     a.href     = url;
-    a.download = 'Approachable AI - Presentation.html';
+    a.download = EXPORT_VARIANTS[variant].filename;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -931,10 +966,10 @@ function ConfigScreen({ onLaunch }) {
     e.target.value = '';
   };
 
-  const handleExport = async () => {
+  const handleExport = async (variant) => {
     setExp(true);
     setMsg('Fetching source files…');
-    const result = await exportStandalone(cfg);
+    const result = await exportStandalone(cfg, variant);
     setMsg(result);
     setExp(false);
   };
@@ -1090,16 +1125,26 @@ function ConfigScreen({ onLaunch }) {
             LAUNCH PRESENTATION
           </button>
 
-          <button onClick={handleExport} disabled={exporting} style={{
-            padding: '10px 32px',
-            background: 'transparent',
-            color: exporting ? C_MUTED : C_DIM,
-            border: `1px solid ${exporting ? C_MUTED : 'rgba(214,224,233,0.35)'}`,
-            borderRadius: 8, fontFamily: C_MONO,
-            fontSize: 11, letterSpacing: '0.1em', cursor: exporting ? 'default' : 'pointer',
-          }}>
-            {exporting ? 'EXPORTING…' : '↓ EXPORT STANDALONE HTML'}
-          </button>
+          {/* Standalone exports — interactive (gated) and video (endless loop) */}
+          <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap', justifyContent: 'center' }}>
+            {[
+              { variant: 'interactive', label: '↓ EXPORT INTERACTIVE STANDALONE HTML',
+                title: 'Click/scroll to advance between scenes' },
+              { variant: 'video', label: '↓ EXPORT VIDEO HTML',
+                title: 'Plays continuously on a loop with no input — works offline' },
+            ].map(({ variant, label, title }) => (
+              <button key={variant} onClick={() => handleExport(variant)} disabled={exporting} title={title} style={{
+                padding: '10px 24px',
+                background: 'transparent',
+                color: exporting ? C_MUTED : C_DIM,
+                border: `1px solid ${exporting ? C_MUTED : 'rgba(214,224,233,0.35)'}`,
+                borderRadius: 8, fontFamily: C_MONO,
+                fontSize: 11, letterSpacing: '0.1em', cursor: exporting ? 'default' : 'pointer',
+              }}>
+                {exporting ? 'EXPORTING…' : label}
+              </button>
+            ))}
+          </div>
 
           {/* Config file import / export */}
           <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>

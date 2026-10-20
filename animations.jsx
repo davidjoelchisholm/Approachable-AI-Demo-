@@ -181,7 +181,8 @@ function RectSprite({ x = 0, y = 0, width = 100, height = 100, color = '#111',
 
 // ── Stage ─────────────────────────────────────────────────────────────────────
 function Stage({ width = 1280, height = 720, duration = 10, background = '#f6f4ef',
-  autoplay = true, gates = [], children }) {
+  autoplay = true, gates = [], loop = false, children }) {
+  // loop: kiosk/video mode — no gates, wrap to 0 at the end, ignore all input.
 
   const [time, setTime]           = React.useState(0);
   const [playing, setPlaying]     = React.useState(autoplay);
@@ -264,6 +265,12 @@ function Stage({ width = 1280, height = 720, duration = 10, background = '#f6f4e
           const gate = gatesRef.current[segmentIdxRef.current];
           const gateAt = gate ? gate.at : undefined;
           let next = t + rawDt * speedRef.current;
+          if (loop) {
+            // Wrap to the start; modulo keeps a long background-tab frame from overshooting.
+            if (next >= duration) next = next % duration;
+            timeRef.current = next;
+            return next;
+          }
           if (gateAt !== undefined && next >= gateAt) {
             frozenRef.current = true;
             setFrozen(true);
@@ -287,10 +294,11 @@ function Stage({ width = 1280, height = 720, duration = 10, background = '#f6f4e
     };
     rafRef.current = requestAnimationFrame(step);
     return () => { if (rafRef.current) cancelAnimationFrame(rafRef.current); lastTsRef.current = null; };
-  }, [playing, duration]);
+  }, [playing, duration, loop]);
 
   // Wheel / scroll handler
   React.useEffect(() => {
+    if (loop) return;
     const GATE_DEBOUNCE = 500; // ms between gate-advance events
 
     const onWheel = (e) => {
@@ -382,10 +390,11 @@ function Stage({ width = 1280, height = 720, duration = 10, background = '#f6f4e
 
     window.addEventListener('wheel', onWheel, { passive: false });
     return () => window.removeEventListener('wheel', onWheel);
-  }, []);
+  }, [loop]);
 
   // Arrow-key gate navigation
   React.useEffect(() => {
+    if (loop) return;
     const onKey = (e) => {
       if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
       e.preventDefault();
@@ -440,7 +449,7 @@ function Stage({ width = 1280, height = 720, duration = 10, background = '#f6f4e
 
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, []);
+  }, [loop]);
 
   // Show indicator when frozen at a gate (not at the very end)
   const showScrollIndicator = frozen && !manualPause && segmentIdx < gates.length;
@@ -452,6 +461,7 @@ function Stage({ width = 1280, height = 720, duration = 10, background = '#f6f4e
   );
 
   const handleClick = () => {
+    if (loop) return;
     if (frozenRef.current) {
       // Advance past gate — same behaviour as scrolling down
       const g = gatesRef.current;
@@ -479,7 +489,7 @@ function Stage({ width = 1280, height = 720, duration = 10, background = '#f6f4e
       position: 'absolute', inset: 0,
       display: 'flex', alignItems: 'center', justifyContent: 'center',
       background: '#0a0a0a', overflow: 'hidden',
-      cursor: 'default',
+      cursor: loop ? 'none' : 'default',
     }}>
       <div data-anim-canvas="true" style={{
         width, height, background,
